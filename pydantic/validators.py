@@ -103,7 +103,7 @@ def bool_validator(v: Any) -> bool:
 
 
 def int_validator(v: Any) -> int:
-    if isinstance(v, int) and not (v is True or v is False):
+    if isinstance(v, int) and v is not True and v is not False:
         return v
 
     try:
@@ -113,7 +113,7 @@ def int_validator(v: Any) -> int:
 
 
 def strict_int_validator(v: Any) -> int:
-    if isinstance(v, int) and not (v is True or v is False):
+    if isinstance(v, int) and v is not True and v is not False:
         return v
     raise errors.IntegerError()
 
@@ -551,7 +551,7 @@ def find_validators(  # noqa: C901 (ignore complexity)
     if type_ is Any:
         return
     type_type = type_.__class__
-    if type_type == ForwardRef or type_type == TypeVar:
+    if type_type in [ForwardRef, TypeVar]:
         return
     if type_ is Pattern:
         yield pattern_validator

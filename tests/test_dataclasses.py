@@ -501,12 +501,15 @@ def test_nested_schema():
 
 
 def test_initvar():
-    InitVar = dataclasses.InitVar
+
 
     @pydantic.dataclasses.dataclass
     class TestInitVar:
         x: int
+        InitVar = dataclasses.InitVar
+
         y: InitVar
+
 
     tiv = TestInitVar(1, 2)
     assert tiv.x == 1

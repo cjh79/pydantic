@@ -123,11 +123,12 @@ def test_constrained_list_default():
 
 
 def test_constrained_list_too_long():
+
     class ConListModelMax(BaseModel):
         v: conlist(int, max_items=10) = []
 
     with pytest.raises(ValidationError) as exc_info:
-        ConListModelMax(v=list(str(i) for i in range(11)))
+        ConListModelMax(v=[str(i) for i in range(11)])
     assert exc_info.value.errors() == [
         {
             'loc': ('v',),
@@ -274,11 +275,12 @@ def test_constrained_set_default_invalid():
 
 
 def test_constrained_set_too_long():
+
     class ConSetModelMax(BaseModel):
         v: conset(int, max_items=10) = []
 
     with pytest.raises(ValidationError) as exc_info:
-        ConSetModelMax(v=set(str(i) for i in range(11)))
+        ConSetModelMax(v={str(i) for i in range(11)})
     assert exc_info.value.errors() == [
         {
             'loc': ('v',),
@@ -985,14 +987,7 @@ def test_sequence_success(cls, value, result):
     assert Model(v=value).v == result
 
 
-@pytest.mark.parametrize(
-    'cls, value,result',
-    (
-        (int, (i for i in range(3)), iter([0, 1, 2])),
-        (float, (float(i) for i in range(3)), iter([0.0, 1.0, 2.0])),
-        (str, (str(i) for i in range(3)), iter(['0', '1', '2'])),
-    ),
-)
+@pytest.mark.parametrize('cls, value,result', ((int, iter(range(3)), iter([0, 1, 2])), (float, (float(i) for i in range(3)), iter([0.0, 1.0, 2.0])), (str, (str(i) for i in range(3)), iter(['0', '1', '2']))))
 def test_sequence_generator_success(cls, value, result):
     class Model(BaseModel):
         v: Sequence[cls]
@@ -1069,8 +1064,7 @@ def test_infinite_iterable_validate_first():
 
     def str_iterable():
         while True:
-            for c in 'foobarbaz':
-                yield c
+            yield from 'foobarbaz'
 
     with pytest.raises(ValidationError) as exc_info:
         Model(it=str_iterable(), b=3)
@@ -1079,29 +1073,15 @@ def test_infinite_iterable_validate_first():
     ]
 
 
-@pytest.mark.parametrize(
-    'cls,value,errors',
-    (
-        (
-            int,
-            (i for i in ['a', 'b', 'c']),
-            [
+@pytest.mark.parametrize('cls,value,errors', ((int, iter(['a', 'b', 'c']), [
                 {'loc': ('v', 0), 'msg': 'value is not a valid integer', 'type': 'type_error.integer'},
                 {'loc': ('v', 1), 'msg': 'value is not a valid integer', 'type': 'type_error.integer'},
                 {'loc': ('v', 2), 'msg': 'value is not a valid integer', 'type': 'type_error.integer'},
-            ],
-        ),
-        (
-            float,
-            (i for i in ['a', 'b', 'c']),
-            [
+            ]), (float, iter(['a', 'b', 'c']), [
                 {'loc': ('v', 0), 'msg': 'value is not a valid float', 'type': 'type_error.float'},
                 {'loc': ('v', 1), 'msg': 'value is not a valid float', 'type': 'type_error.float'},
                 {'loc': ('v', 2), 'msg': 'value is not a valid float', 'type': 'type_error.float'},
-            ],
-        ),
-    ),
-)
+            ])))
 def test_sequence_generator_fails(cls, value, errors):
     class Model(BaseModel):
         v: Sequence[cls]
@@ -1907,11 +1887,12 @@ def test_valid_simple_json():
 
 
 def test_invalid_simple_json():
+
     class JsonModel(BaseModel):
         json_obj: Json
 
-    obj = '{a: 1, b: [2, 3]}'
     with pytest.raises(ValidationError) as exc_info:
+        obj = '{a: 1, b: [2, 3]}'
         JsonModel(json_obj=obj)
     assert exc_info.value.errors()[0] == {'loc': ('json_obj',), 'msg': 'Invalid JSON', 'type': 'value_error.json'}
 
@@ -1933,11 +1914,12 @@ def test_valid_detailed_json():
 
 
 def test_invalid_detailed_json_value_error():
+
     class JsonDetailedModel(BaseModel):
         json_obj: Json[List[int]]
 
-    obj = '(1, 2, 3)'
     with pytest.raises(ValidationError) as exc_info:
+        obj = '(1, 2, 3)'
         JsonDetailedModel(json_obj=obj)
     assert exc_info.value.errors()[0] == {'loc': ('json_obj',), 'msg': 'Invalid JSON', 'type': 'value_error.json'}
 
@@ -1951,11 +1933,12 @@ def test_valid_detailed_json_bytes():
 
 
 def test_invalid_detailed_json_type_error():
+
     class JsonDetailedModel(BaseModel):
         json_obj: Json[List[int]]
 
-    obj = '["a", "b", "c"]'
     with pytest.raises(ValidationError) as exc_info:
+        obj = '["a", "b", "c"]'
         JsonDetailedModel(json_obj=obj)
     assert exc_info.value.errors() == [
         {'loc': ('json_obj', 0), 'msg': 'value is not a valid integer', 'type': 'type_error.integer'},
@@ -1965,11 +1948,12 @@ def test_invalid_detailed_json_type_error():
 
 
 def test_json_not_str():
+
     class JsonDetailedModel(BaseModel):
         json_obj: Json[List[int]]
 
-    obj = 12
     with pytest.raises(ValidationError) as exc_info:
+        obj = 12
         JsonDetailedModel(json_obj=obj)
     assert exc_info.value.errors()[0] == {
         'loc': ('json_obj',),

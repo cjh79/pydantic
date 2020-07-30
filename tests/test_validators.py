@@ -1099,11 +1099,14 @@ def test_literal_validator():
 
 @pytest.mark.skipif(not Literal, reason='typing_extensions not installed')
 def test_nested_literal_validator():
-    L1 = Literal['foo']
-    L2 = Literal['bar']
 
-    class Model(BaseModel):
+
+    class Model((BaseModel)):
+        L1 = Literal['foo']
+        L2 = Literal['bar']
+
         a: Literal[L1, L2]
+
 
     Model(a='foo')
 

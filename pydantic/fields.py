@@ -405,12 +405,9 @@ class ModelField(Representation):
                 self.required = False
             self.allow_none = True
             return
-        elif self.type_ is Pattern:
+        elif self.type_ is Pattern or is_literal_type(self.type_):
             # python 3.7 only, Pattern is a typing object but without sub fields
             return
-        elif is_literal_type(self.type_):
-            return
-
         origin = getattr(self.type_, '__origin__', None)
         if origin is None:
             # field is not "typing" object eg. Union, Dict, List etc.

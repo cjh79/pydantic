@@ -97,10 +97,7 @@ def null_missing_string(*args, **kwargs):
 
 
 def rand_email():
-    if random.random() < 0.2:
-        c1, c2 = UNICODE, LETTERS
-    else:
-        c1, c2 = LETTERS, LETTERS
+    c1, c2 = (UNICODE, LETTERS) if random.random() < 0.2 else (LETTERS, LETTERS)
     return f'{rand_string(10, 50, corpus=c1)}@{rand_string(10, 50, corpus=c2)}.{rand_string(2, 5, corpus=c2)}'
 
 
@@ -174,7 +171,7 @@ def run_tests(classes, cases, repeats, json=False):
             if json:
                 models = [m for passed, m in (test.validate(c) for c in cases) if passed]
             start = datetime.now()
-            for j in range(3):
+            for _ in range(3):
                 if json:
                     for model in models:
                         test.to_json(model)

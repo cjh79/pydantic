@@ -244,10 +244,7 @@ def parse_str(value: str) -> RGBA:
     if m:
         *rgb, a = m.groups()
         r, g, b = [int(v, 16) for v in rgb]
-        if a:
-            alpha = int(a, 16) / 255
-        else:
-            alpha = None
+        alpha = int(a, 16) / 255 if a else None
         return ints_to_rgba(r, g, b, alpha)
 
     m = re.fullmatch(r_rgb, value_lower)
@@ -325,7 +322,7 @@ def parse_hsl(h: str, h_units: str, sat: str, light: str, alpha: Optional[float]
         h_value = h_value % rads / rads
     else:
         # turns
-        h_value = h_value % 1
+        h_value %= 1
 
     r, g, b = hls_to_rgb(h_value, l_value, s_value)
     return RGBA(r, g, b, alpha)

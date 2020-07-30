@@ -242,10 +242,10 @@ class ModelMetaclass(ABCMeta):
 
         prepare_config(config, name)
 
-        class_vars = set()
         if (namespace.get('__module__'), namespace.get('__qualname__')) != ('pydantic.main', 'BaseModel'):
             annotations = resolve_annotations(namespace.get('__annotations__', {}), namespace.get('__module__', None))
             untouched_types = UNTOUCHED_TYPES + config.keep_untouched
+            class_vars = set()
             # annotation only fields need to come first in fields
             for ann_name, ann_type in annotations.items():
                 if is_classvar(ann_type):
@@ -453,7 +453,9 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
     @classmethod
     def parse_obj(cls: Type['Model'], obj: Any) -> 'Model':
         if cls.__custom_root_type__ and (
-            not (isinstance(obj, dict) and obj.keys() == {ROOT_KEY}) or cls.__fields__[ROOT_KEY].shape == SHAPE_MAPPING
+            not isinstance(obj, dict)
+            or obj.keys() != {ROOT_KEY}
+            or cls.__fields__[ROOT_KEY].shape == SHAPE_MAPPING
         ):
             obj = {ROOT_KEY: obj}
         elif not isinstance(obj, dict):
@@ -743,21 +745,13 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_unset: bool,
         update: Optional['DictStrAny'] = None,
     ) -> Optional[AbstractSet[str]]:
-        if include is None and exclude is None and exclude_unset is False:
+        if include is None and exclude is None and not exclude_unset:
             return None
 
         keys: AbstractSet[str]
-        if exclude_unset:
-            keys = self.__fields_set__.copy()
-        else:
-            keys = self.__dict__.keys()
-
+        keys = self.__fields_set__.copy() if exclude_unset else self.__dict__.keys()
         if include is not None:
-            if isinstance(include, Mapping):
-                keys &= include.keys()
-            else:
-                keys &= include
-
+            keys &= include.keys() if isinstance(include, Mapping) else include
         if update:
             keys -= update.keys()
 

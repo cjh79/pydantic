@@ -168,9 +168,8 @@ class PydanticModelTransformer:
         config = self.collect_config()
         fields = self.collect_fields(config)
         for field in fields:
-            if info[field.name].type is None:
-                if not ctx.api.final_iteration:
-                    ctx.api.defer()
+            if info[field.name].type is None and not ctx.api.final_iteration:
+                ctx.api.defer()
         is_settings = any(get_fullname(base) == BASESETTINGS_FULLNAME for base in info.mro[:-1])
         self.add_initializer(fields, config, is_settings)
         self.add_construct_method(fields)
@@ -285,11 +284,10 @@ class PydanticModelTransformer:
                 if name not in known_fields:
                     field = PydanticModelField.deserialize(info, data)
                     known_fields.add(name)
-                    superclass_fields.append(field)
                 else:
                     (field,) = [a for a in all_fields if a.name == name]
                     all_fields.remove(field)
-                    superclass_fields.append(field)
+                superclass_fields.append(field)
             all_fields = superclass_fields + all_fields
         return all_fields
 
@@ -373,7 +371,12 @@ class PydanticModelTransformer:
         lhs = substmt.lvalues[0]
         if not (isinstance(lhs, NameExpr) and lhs.name in self.tracked_config_fields):
             return None
-        if lhs.name == 'extra':
+        if lhs.name == 'alias_generator':
+            has_alias_generator = True
+            if isinstance(substmt.rvalue, NameExpr) and substmt.rvalue.fullname == 'builtins.None':
+                has_alias_generator = False
+            return ModelConfigData(has_alias_generator=has_alias_generator)
+        elif lhs.name == 'extra':
             if isinstance(substmt.rvalue, StrExpr):
                 forbid_extra = substmt.rvalue.value == 'forbid'
             elif isinstance(substmt.rvalue, MemberExpr):
@@ -382,11 +385,6 @@ class PydanticModelTransformer:
                 error_invalid_config_value(lhs.name, self._ctx.api, substmt)
                 return None
             return ModelConfigData(forbid_extra=forbid_extra)
-        if lhs.name == 'alias_generator':
-            has_alias_generator = True
-            if isinstance(substmt.rvalue, NameExpr) and substmt.rvalue.fullname == 'builtins.None':
-                has_alias_generator = False
-            return ModelConfigData(has_alias_generator=has_alias_generator)
         if isinstance(substmt.rvalue, NameExpr) and substmt.rvalue.fullname in ('builtins.True', 'builtins.False'):
             return ModelConfigData(**{lhs.name: substmt.rvalue.fullname == 'builtins.True'})
         error_invalid_config_value(lhs.name, self._ctx.api, substmt)
@@ -450,12 +448,16 @@ class PydanticModelTransformer:
         Returns a list of mypy Argument instances for use in the generated signatures.
         """
         info = self._ctx.cls.info
-        arguments = [
-            field.to_argument(info, typed=typed, force_optional=force_all_optional, use_alias=use_alias)
+        return [
+            field.to_argument(
+                info,
+                typed=typed,
+                force_optional=force_all_optional,
+                use_alias=use_alias,
+            )
             for field in fields
             if not (use_alias and field.has_dynamic_alias)
         ]
-        return arguments
 
     def should_init_forbid_extra(self, fields: List['PydanticModelField'], config: 'ModelConfigData') -> bool:
         """
@@ -464,9 +466,13 @@ class PydanticModelTransformer:
         We disallow arbitrary kwargs if the extra config setting is "forbid", or if the plugin config says to,
         *unless* a required dynamic alias is present (since then we can't determine a valid signature).
         """
-        if not config.allow_population_by_field_name:
-            if self.is_dynamic_alias_present(fields, bool(config.has_alias_generator)):
-                return False
+        if (
+            not config.allow_population_by_field_name
+            and self.is_dynamic_alias_present(
+                fields, bool(config.has_alias_generator)
+            )
+        ):
+            return False
         if config.forbid_extra:
             return True
         return self.plugin_config.init_forbid_extra

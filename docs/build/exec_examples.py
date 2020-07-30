@@ -90,9 +90,7 @@ def build_print_statement(line_no: int, s: str, lines: List[str]) -> None:
 
 
 def all_md_contents() -> str:
-    file_contents = []
-    for f in DOCS_DIR.glob('**/*.md'):
-        file_contents.append(f.read_text())
+    file_contents = [f.read_text() for f in DOCS_DIR.glob('**/*.md')]
     return '\n\n\n'.join(file_contents)
 
 

@@ -570,7 +570,6 @@ def field_singleton_sub_fields_schema(
     schema. I.e., fields used as "type parameters", like ``str`` and ``int`` in ``Tuple[str, int]``.
     """
     ref_prefix = ref_prefix or default_prefix
-    definitions = {}
     nested_models: Set[str] = set()
     sub_fields = [sf for sf in sub_fields if sf.include_in_schema()]
     if len(sub_fields) == 1:
@@ -584,6 +583,7 @@ def field_singleton_sub_fields_schema(
         )
     else:
         sub_field_schemas = []
+        definitions = {}
         for sf in sub_fields:
             sub_schema, sub_definitions, sub_nested_models = field_type_schema(
                 sf,
